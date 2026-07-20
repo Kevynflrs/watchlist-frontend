@@ -1,4 +1,5 @@
 import streamlit as st
+from api_client import get_train_status
 
 st.set_page_config(
     page_title="Ma Watchlist",
@@ -32,3 +33,19 @@ CUSTOM_CSS = """
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+with st.sidebar:
+    st.header("État du modèle")
+
+    try:
+        status = get_train_status()
+    except Exception:
+        st.error("Backend injoignable. Vérifie que l'API tourne.")
+    else:
+        if status.get("model_saved"):
+            st.success("Modèle entraîné et disponible")
+            accuracy = status.get("accuracy")
+            if accuracy is not None:
+                st.metric("Accuracy", f"{accuracy:.1%}")
+        else:
+            st.warning("Aucun modèle entraîné pour le moment")
