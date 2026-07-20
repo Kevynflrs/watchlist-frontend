@@ -1,6 +1,6 @@
 import streamlit as st
 
-from api_client import get_train_status, import_csv
+from api_client import enrich_posters, get_train_status, import_csv, trigger_train
 
 st.set_page_config(
     page_title="Ma Watchlist",
@@ -85,3 +85,30 @@ with st.sidebar:
                 st.success(
                     f"{result.get('inserted', 0)} ajoutés, {result.get('updated', 0)} mis à jour"
                 )
+
+    st.divider()
+    st.header("Actions")
+
+    if st.button("Ré-entraîner"):
+        with st.spinner("Entraînement en cours..."):
+            try:
+                result = trigger_train()
+            except Exception as exc:
+                st.error(f"Échec de l'entraînement : {exc}")
+            else:
+                st.cache_data.clear()
+                accuracy = result.get("accuracy")
+                if accuracy is not None:
+                    st.success(f"Modèle ré-entraîné (accuracy : {accuracy:.1%})")
+                else:
+                    st.success("Modèle ré-entraîné")
+
+    if st.button("Compléter les affiches"):
+        with st.spinner("Enrichissement en cours..."):
+            try:
+                result = enrich_posters(limit=100)
+            except Exception as exc:
+                st.error(f"Échec de l'enrichissement : {exc}")
+            else:
+                st.cache_data.clear()
+                st.success(f"{result.get('updated', 0)} affiches complétées")
