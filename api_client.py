@@ -42,3 +42,37 @@ def get_train_status() -> dict:
     response = requests.get(f"{BACKEND_URL}/train/status", timeout=10)
     response.raise_for_status()
     return response.json()
+
+
+def trigger_train() -> dict:
+    """Declenche un re-entrainement du modele cote backend.
+
+    Timeout long : l'entrainement peut prendre plusieurs dizaines de
+    secondes, contrairement aux simples lectures.
+    """
+    response = requests.post(f"{BACKEND_URL}/train/", timeout=120)
+    response.raise_for_status()
+    return response.json()
+
+
+def import_csv(endpoint: str, file_bytes: bytes, filename: str) -> dict:
+    """Importe un fichier CSV (watched ou ratings) vers le backend.
+
+    endpoint : chemin relatif, ex. 'watched/import/watched' ou
+    'watched/import/ratings' (les deux endpoints ont la meme forme).
+    """
+    files = {"file": (filename, file_bytes, "text/csv")}
+    response = requests.post(f"{BACKEND_URL}/{endpoint}", files=files, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
+def enrich_posters(limit: int = 100) -> dict:
+    """Declenche l'enrichissement du catalogue (recuperation des affiches TMDB)."""
+    response = requests.post(
+        f"{BACKEND_URL}/catalogue/enrich",
+        params={"limit": limit},
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()
