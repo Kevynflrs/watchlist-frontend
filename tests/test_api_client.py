@@ -1,4 +1,7 @@
+import pytest
 import responses
+import requests
+
 from api_client import BACKEND_URL, get_recommendations, import_csv
 
 
@@ -52,8 +55,5 @@ def test_get_recommendations_raises_on_http_error():
         status=500,
     )
 
-    try:
-        get_recommendations(categorie="Blockbuster", limit=10)
-        raise AssertionError("Une exception HTTPError aurait du etre levee")
-    except Exception as exc:
-        assert "500" in str(exc)
+    with pytest.raises(requests.HTTPError):
+        get_recommendations(categorie="TestErreur500", limit=10)
