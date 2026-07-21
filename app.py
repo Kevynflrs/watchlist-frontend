@@ -124,7 +124,9 @@ with st.sidebar:
 
 
 def render_row(categorie: str) -> None:
-    """Affiche une rangee de films recommandes pour une categorie donnee."""
+    """Affiche une rangee de films recommandes, decoupee en lignes de 6.
+    Le panneau de synopsis s'affiche juste sous la ligne du film selectionne.
+    """
     try:
         films = get_recommendations(categorie=categorie, limit=18)
     except Exception as exc:
@@ -137,30 +139,50 @@ def render_row(categorie: str) -> None:
         st.info("Aucune recommandation disponible pour cette catégorie.")
         return
 
-    cols = st.columns(6)
+    session_key = f"selected_film_{categorie}"
+    if session_key not in st.session_state:
+        st.session_state[session_key] = None
 
-    for i, film in enumerate(films):
-        col = cols[i % 6]
-        with col:
-            poster_url = (
-                film.get("poster_url") or "https://placehold.co/200x300?text=Pas+d%27affiche"
-            )
-            st.image(poster_url, use_container_width=True)
+    selected_i = st.session_state[session_key]
 
-            annee = film.get("year", "?")
-            genres = film.get("genres") or []
-            genre_str = ", ".join(genres) if genres else "Genre inconnu"
-            score = film.get("score_prediction", 0)
+    # On decoupe la liste en paquets de 6 : un paquet = une ligne visuelle.
+    for start in range(0, len(films), 6):
+        line_films = films[start : start + 6]
+        cols = st.columns(6)
 
-            st.markdown(
-                f'<div class="movie-title">{film.get("title", "Titre inconnu")}</div>'
-                f'<div class="movie-meta">{annee} · {genre_str}</div>'
-                f'<span class="movie-score">{score:.0%}</span>',
-                unsafe_allow_html=True,
-            )
+        for offset, film in enumerate(line_films):
+            i = start + offset  # index global, pour des cles de bouton uniques
+            with cols[offset]:
+                poster_url = (
+                    film.get("poster_url") or "https://placehold.co/200x300?text=Pas+d%27affiche"
+                )
+                st.image(poster_url, use_container_width=True)
 
-            with st.expander("Synopsis"):
+                annee = film.get("year", "?")
+                genres = film.get("genres") or []
+                genre_str = ", ".join(genres) if genres else "Genre inconnu"
+                score = film.get("score_prediction", 0)
+
+                st.markdown(
+                    f'<div class="movie-title">{film.get("title", "Titre inconnu")}</div>'
+                    f'<div class="movie-meta">{annee} · {genre_str}</div>'
+                    f'<span class="movie-score">{score:.0%}</span>',
+                    unsafe_allow_html=True,
+                )
+
+                if st.button("Synopsis", key=f"btn_{categorie}_{i}"):
+                    st.session_state[session_key] = i
+                    st.rerun()
+
+        # Le film selectionne fait-il partie de CETTE ligne (start a start+5) ? Si oui, panneau affiche ici, avant de passer a la ligne suivante.
+        if selected_i is not None and start <= selected_i < start + 6:
+            film = films[selected_i]
+            with st.container(border=True):
+                st.markdown(f"**{film.get('title', 'Titre inconnu')}**")
                 st.write(film.get("overview", "Pas de synopsis disponible."))
+                if st.button("Fermer", key=f"close_{categorie}_{start}"):
+                    st.session_state[session_key] = None
+                    st.rerun()
 
 
 FALLBACK_CATEGORIES = ["Blockbuster", "Grand Public", "Film d'Auteur"]
