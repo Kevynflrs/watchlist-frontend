@@ -30,7 +30,7 @@ def get_categories() -> list[str]:
     """
     response = requests.get(f"{BACKEND_URL}/recommend/categories", timeout=10)
     response.raise_for_status()
-    return response.json()
+    return response.json()["categories"]
 
 
 def get_train_status() -> dict:
