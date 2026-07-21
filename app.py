@@ -18,25 +18,27 @@ st.set_page_config(
 # CSS custom pour les cartes de films injecte ici car il doit s'appliquer a toute la page, des le demarrage.
 CUSTOM_CSS = """
 <style>
+[data-testid="stImage"] img {
+    height: 280px;
+    width: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+}
 .movie-title {
     font-weight: 600;
     font-size: 0.95rem;
     margin-top: 0.4rem;
     margin-bottom: 0.1rem;
+    height: 2.6rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 .movie-meta {
     font-size: 0.8rem;
     color: #888;
     margin-bottom: 0.3rem;
-}
-.movie-score {
-    display: inline-block;
-    background-color: #E50914;
-    color: white;
-    border-radius: 4px;
-    padding: 0.1rem 0.4rem;
-    font-size: 0.75rem;
-    font-weight: 600;
 }
 </style>
 """
