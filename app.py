@@ -36,15 +36,39 @@ CUSTOM_CSS = """
 }
 .movie-score {
     display: inline-block;
-    background-color: #E50914;
-    color: white;
     border-radius: 4px;
     padding: 0.1rem 0.4rem;
     font-size: 0.75rem;
     font-weight: 600;
+    color: white;
+}
+.score-high {
+    background-color: #2E7D32;
+}
+.score-mid {
+    background-color: #E65100;
+}
+.score-low {
+    background-color: #C62828;
 }
 </style>
 """
+
+
+def get_score_css_class(score: float) -> str:
+    """Determine la classe CSS a appliquer selon le score de prediction.
+
+    >= 0.75 : vert (recommandation forte)
+    >= 0.50 : orange (recommandation moderee)
+    < 0.50  : rouge (recommandation faible)
+    """
+    if score >= 0.75:
+        return "score-high"
+    if score >= 0.50:
+        return "score-mid"
+    return "score-low"
+
+
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 with st.sidebar:
@@ -165,11 +189,12 @@ def render_row(categorie: str) -> None:
                 genres = film.get("genres") or []
                 genre_str = ", ".join(genres) if genres else "Genre inconnu"
                 score = film.get("score_prediction", 0)
+                score_class = get_score_css_class(score)
 
                 st.markdown(
                     f'<div class="movie-title">{film.get("title", "Titre inconnu")}</div>'
                     f'<div class="movie-meta">{annee} · {genre_str}</div>'
-                    f'<span class="movie-score">{score:.0%}</span>',
+                    f'<span class="movie-score {score_class}">{score:.0%}</span>',
                     unsafe_allow_html=True,
                 )
 
