@@ -1,6 +1,12 @@
 import streamlit as st
 
-from api_client import enrich_posters, get_train_status, import_csv, trigger_train
+from api_client import (
+    enrich_posters,
+    get_recommendations,
+    get_train_status,
+    import_csv,
+    trigger_train,
+)
 
 st.set_page_config(
     page_title="Ma Watchlist",
@@ -112,3 +118,46 @@ with st.sidebar:
             else:
                 st.cache_data.clear()
                 st.success(f"{result.get('updated', 0)} affiches complétées")
+
+
+def render_row(categorie: str) -> None:
+    """Affiche une rangee de films recommandes pour une categorie donnee.
+
+    Grille de 6 colonnes ; les films au-dela de 6 retombent sur les
+    colonnes suivantes grace a l'operateur modulo (i % 6).
+    """
+    try:
+        films = get_recommendations(categorie=categorie, limit=18)
+    except Exception as exc:
+        st.error(f"Impossible de charger les recommandations : {exc}")
+        return
+
+    st.subheader(categorie)
+
+    if not films:
+        st.info("Aucune recommandation disponible pour cette catégorie.")
+        return
+
+    cols = st.columns(6)
+
+    for i, film in enumerate(films):
+        col = cols[i % 6]
+        with col:
+            poster_url = (
+                film.get("poster_url") or "https://placehold.co/200x300?text=Pas+d%27affiche"
+            )
+            st.image(poster_url, use_container_width=True)
+
+            annee = film.get("annee", "?")
+            genre = film.get("genre", "")
+            score = film.get("score", 0)
+
+            st.markdown(
+                f'<div class="movie-title">{film.get("titre", "Titre inconnu")}</div>'
+                f'<div class="movie-meta">{annee} · {genre}</div>'
+                f'<span class="movie-score">{score:.0%}</span>',
+                unsafe_allow_html=True,
+            )
+
+            with st.expander("Synopsis"):
+                st.write(film.get("synopsis", "Pas de synopsis disponible."))
