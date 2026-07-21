@@ -50,9 +50,9 @@ with st.sidebar:
     except Exception:
         st.error("Backend injoignable. Vérifie que l'API tourne.")
     else:
-        if status.get("model_saved"):
+        if status.get("model_exists"):
             st.success("Modèle entraîné et disponible")
-            accuracy = status.get("accuracy")
+            accuracy = status.get("metrics", {}).get("accuracy")
             if accuracy is not None:
                 st.metric("Accuracy", f"{accuracy:.1%}")
         else:
@@ -122,11 +122,7 @@ with st.sidebar:
 
 
 def render_row(categorie: str) -> None:
-    """Affiche une rangee de films recommandes pour une categorie donnee.
-
-    Grille de 6 colonnes ; les films au-dela de 6 retombent sur les
-    colonnes suivantes grace a l'operateur modulo (i % 6).
-    """
+    """Affiche une rangee de films recommandes pour une categorie donnee."""
     try:
         films = get_recommendations(categorie=categorie, limit=18)
     except Exception as exc:
@@ -149,19 +145,20 @@ def render_row(categorie: str) -> None:
             )
             st.image(poster_url, use_container_width=True)
 
-            annee = film.get("annee", "?")
-            genre = film.get("genre", "")
-            score = film.get("score", 0)
+            annee = film.get("year", "?")
+            genres = film.get("genres") or []
+            genre_str = ", ".join(genres) if genres else "Genre inconnu"
+            score = film.get("score_prediction", 0)
 
             st.markdown(
-                f'<div class="movie-title">{film.get("titre", "Titre inconnu")}</div>'
-                f'<div class="movie-meta">{annee} · {genre}</div>'
+                f'<div class="movie-title">{film.get("title", "Titre inconnu")}</div>'
+                f'<div class="movie-meta">{annee} · {genre_str}</div>'
                 f'<span class="movie-score">{score:.0%}</span>',
                 unsafe_allow_html=True,
             )
 
             with st.expander("Synopsis"):
-                st.write(film.get("synopsis", "Pas de synopsis disponible."))
+                st.write(film.get("overview", "Pas de synopsis disponible."))
 
 
 FALLBACK_CATEGORIES = ["Blockbuster", "Grand Public", "Film d'Auteur"]
