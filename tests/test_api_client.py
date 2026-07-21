@@ -1,6 +1,6 @@
 import pytest
-import responses
 import requests
+import responses
 
 from api_client import BACKEND_URL, get_recommendations, import_csv
 
