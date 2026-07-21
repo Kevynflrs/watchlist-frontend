@@ -1,9 +1,9 @@
 import streamlit as st
 
 from api_client import get_categories
-from grid import render_row
-from sidebar import render_sidebar
-from style import inject_custom_css
+from ui.grid import render_row
+from ui.sidebar import render_sidebar
+from ui.style import inject_custom_css
 
 st.set_page_config(
     page_title="Ma Watchlist",
