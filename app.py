@@ -2,6 +2,7 @@ import streamlit as st
 
 from api_client import (
     enrich_posters,
+    get_categories,
     get_recommendations,
     get_train_status,
     import_csv,
@@ -161,3 +162,19 @@ def render_row(categorie: str) -> None:
 
             with st.expander("Synopsis"):
                 st.write(film.get("synopsis", "Pas de synopsis disponible."))
+
+
+FALLBACK_CATEGORIES = ["Blockbuster", "Grand Public", "Film d'Auteur"]
+
+st.title("Ma Watchlist")
+
+try:
+    categories = get_categories()
+except Exception:
+    st.warning("Catégories par défaut affichées (backend injoignable pour /recommend/categories).")
+    categories = FALLBACK_CATEGORIES
+
+for i, categorie in enumerate(categories):
+    render_row(categorie)
+    if i < len(categories) - 1:
+        st.divider()
