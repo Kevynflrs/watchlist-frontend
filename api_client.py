@@ -76,3 +76,32 @@ def enrich_posters(limit: int = 100) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
+def import_catalogue_csv(file_bytes: bytes, filename: str, fill_missing_only: bool = True) -> dict:
+    """Importe un CSV catalogue (export TMDB type Kaggle) vers le backend.
+
+    fill_missing_only=True (defaut) : ne comble que les champs vides en DB, ne degrade jamais une donnee deja presente.
+    fill_missing_only=False : ecrase tout sans condition.
+    """
+    files = {"file": (filename, file_bytes, "text/csv")}
+    response = requests.post(
+        f"{BACKEND_URL}/catalogue/import",
+        files=files,
+        params={"fill_missing_only": fill_missing_only},
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+@st.cache_data(ttl=60)
+def get_catalogue_stats() -> dict:
+    """Recupere les statistiques de completude du catalogue.
+
+    Cache court (1 min) : ces stats ne changent qu'apres un import ou un enrichissement,
+    mais on veut qu'un rafraichissement de page les reflete vite sans re-taper le backend a chaque interaction UI.
+    """
+    response = requests.get(f"{BACKEND_URL}/catalogue/stats", timeout=10)
+    response.raise_for_status()
+    return response.json()

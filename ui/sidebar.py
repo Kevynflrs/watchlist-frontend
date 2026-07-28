@@ -1,16 +1,91 @@
 import streamlit as st
 
-from api_client import enrich_posters, get_train_status, import_csv, trigger_train
+from api_client import (
+    enrich_posters,
+    get_catalogue_stats,
+    get_train_status,
+    import_catalogue_csv,
+    import_csv,
+    trigger_train,
+)
 
 
 def render_sidebar() -> None:
     """Affiche l'integralite de la sidebar (statut, upload, actions admin)."""
     with st.sidebar:
         _render_model_status()
+        _render_catalogue_stats()
         st.divider()
         _render_import_section()
         st.divider()
+        _render_catalogue_import_section()
+        st.divider()
         _render_actions_section()
+
+
+def _format_large_number(value: int) -> str:
+    """Formate un grand nombre en version compacte (ex: 1500 -> '1.5k').
+
+    Pas de suffixe en dessous de 1000, 'k' entre 1000 et 999999,
+    'M' au-dela d'un million.
+    """
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.1f}M"
+    if value >= 1_000:
+        return f"{value / 1_000:.1f}k"
+    return str(value)
+
+
+def _render_catalogue_stats() -> None:
+    """Affiche un petit widget de completude du catalogue (total, affiches, synopsis)."""
+    try:
+        stats = get_catalogue_stats()
+    except Exception:
+        return
+
+    total = stats.get("total_movies", 0)
+    missing_poster = stats.get("missing_poster", 0)
+    missing_overview = stats.get("missing_overview", 0)
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Films", _format_large_number(total))
+    col2.metric("Sans affiche", _format_large_number(missing_poster))
+    col3.metric("Sans synopsis", _format_large_number(missing_overview))
+
+
+def _render_catalogue_import_section() -> None:
+    """Affiche l'upload du CSV catalogue TMDB, avec le choix fill_missing_only."""
+    st.header("Import du catalogue")
+
+    catalogue_file = st.file_uploader(
+        "Fichier CSV TMDB (Kaggle)", type="csv", key="catalogue_uploader"
+    )
+
+    fill_missing_only = st.toggle(
+        "Compléter seulement les champs vides",
+        value=True,
+        key="fill_missing_only_toggle",
+        help="Activé : ne remplit que les champs vides en base. Désactivé : écrase toutes les données existantes.",
+    )
+
+    if catalogue_file is not None and st.button("Importer le catalogue"):
+        with st.spinner("Import du catalogue en cours..."):
+            try:
+                result = import_catalogue_csv(
+                    file_bytes=catalogue_file.getvalue(),
+                    filename=catalogue_file.name,
+                    fill_missing_only=fill_missing_only,
+                )
+            except Exception as exc:
+                st.error(f"Échec de l'import : {exc}")
+            else:
+                st.cache_data.clear()
+                st.success(
+                    f"{result.get('inserted', 0)} ajoutés, "
+                    f"{result.get('updated', 0)} mis à jour, "
+                    f"{result.get('unchanged', 0)} inchangés "
+                    f"({result.get('skipped_duplicates', 0)} doublons ignorés)"
+                )
 
 
 def _render_model_status() -> None:
