@@ -67,8 +67,33 @@ def import_csv(endpoint: str, file_bytes: bytes, filename: str) -> dict:
     return response.json()
 
 
-def enrich_posters(limit: int = 100) -> dict:
-    """Declenche l'enrichissement du catalogue (recuperation des affiches TMDB)."""
+def build_enrich_queue() -> dict:
+    """Scanne le catalogue et ajoute tous les films incomplets a la file d'enrichissement.
+
+    Idempotent : rappelable sans dupliquer les entrees deja en file.
+    """
+    response = requests.post(f"{BACKEND_URL}/catalogue/enrich/queue/build", timeout=60)
+    response.raise_for_status()
+    return response.json()
+
+
+def get_enrich_queue_status() -> dict:
+    """Recupere la taille actuelle de la file d'enrichissement.
+
+    PAS de cache : cette valeur doit refleter l'etat exact apres chaque
+    action (construction ou traitement d'un lot).
+    """
+    response = requests.get(f"{BACKEND_URL}/catalogue/enrich/queue", timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+
+def process_enrich_batch(limit: int = 20) -> dict:
+    """Traite les prochains `limit` films de la file (FIFO) via l'API TMDB.
+
+    Les films en erreur ne sont pas perdus : ils sont renvoyed en fin de
+    file par le backend pour etre retentes plus tard.
+    """
     response = requests.post(
         f"{BACKEND_URL}/catalogue/enrich",
         params={"limit": limit},
