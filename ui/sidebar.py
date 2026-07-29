@@ -1,11 +1,13 @@
 import streamlit as st
 
 from api_client import (
-    enrich_posters,
+    build_enrich_queue,
     get_catalogue_stats,
+    get_enrich_queue_status,
     get_train_status,
     import_catalogue_csv,
     import_csv,
+    process_enrich_batch,
     trigger_train,
 )
 
@@ -19,6 +21,8 @@ def render_sidebar() -> None:
         _render_import_section()
         st.divider()
         _render_catalogue_import_section()
+        st.divider()
+        _render_enrich_queue_section()
         st.divider()
         _render_actions_section()
 
@@ -138,10 +142,10 @@ def _handle_import(endpoint: str, uploaded_file) -> None:
 
 
 def _render_actions_section() -> None:
-    """Affiche les boutons de re-entrainement et d'enrichissement des affiches."""
+    """Affiche le bouton de re-entrainement du modele."""
     st.header("Actions")
 
-    if st.button("Ré-entraîner"):
+    if st.button("🔁 Ré-entraîner"):
         with st.spinner("Entraînement en cours..."):
             try:
                 result = trigger_train()
@@ -155,12 +159,46 @@ def _render_actions_section() -> None:
                 else:
                     st.success("Modèle ré-entraîné")
 
-    if st.button("Compléter les affiches"):
-        with st.spinner("Enrichissement en cours..."):
+
+def _render_enrich_queue_section() -> None:
+    """Affiche la gestion de la file d'enrichissement TMDB (construire, traiter par lots)."""
+    st.header("Enrichissement du catalogue")
+
+    if "queue_size" not in st.session_state:
+        try:
+            st.session_state["queue_size"] = get_enrich_queue_status().get("queue_size", 0)
+        except Exception:
+            st.session_state["queue_size"] = None
+
+    if st.session_state["queue_size"] is None:
+        st.error("Impossible de récupérer l'état de la file.")
+    else:
+        st.metric("Films en file", st.session_state["queue_size"])
+
+    if st.button("Construire la file"):
+        with st.spinner("Scan du catalogue en cours..."):
             try:
-                result = enrich_posters(limit=100)
+                result = build_enrich_queue()
             except Exception as exc:
-                st.error(f"Échec de l'enrichissement : {exc}")
+                st.error(f"Échec de la construction de la file : {exc}")
+            else:
+                st.session_state["queue_size"] = result.get("queue_size", 0)
+                st.success(f"{result.get('added_to_queue', 0)} films ajoutés à la file")
+
+    batch_limit = st.number_input(
+        "Films à traiter par lot", min_value=1, max_value=200, value=20, key="batch_limit_input"
+    )
+
+    if st.button("Traiter un lot"):
+        with st.spinner("Traitement du lot en cours..."):
+            try:
+                result = process_enrich_batch(limit=int(batch_limit))
+            except Exception as exc:
+                st.error(f"Échec du traitement : {exc}")
             else:
                 st.cache_data.clear()
-                st.success(f"{result.get('updated', 0)} affiches complétées")
+                st.session_state["queue_size"] = result.get("remaining_in_queue", 0)
+                st.success(
+                    f"{result.get('enriched', 0)} enrichis sur {result.get('checked', 0)} "
+                    f"({result.get('errors', 0)} erreurs, renvoyés en fin de file)"
+                )
