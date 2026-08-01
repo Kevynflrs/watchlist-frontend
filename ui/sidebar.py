@@ -145,7 +145,7 @@ def _render_actions_section() -> None:
     """Affiche le bouton de re-entrainement du modele."""
     st.header("Actions")
 
-    if st.button("🔁 Ré-entraîner"):
+    if st.button("Ré-entraîner"):
         with st.spinner("Entraînement en cours..."):
             try:
                 result = trigger_train()
