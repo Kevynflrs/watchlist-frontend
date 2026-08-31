@@ -12,11 +12,15 @@ def get_recommendations(categorie: str, limit: int = 20) -> list[dict]:
 
     Cache de 5 minutes : les recos ne changent qu'apres un re-entrainement,
     pas besoin de retaper le backend a chaque interaction UI.
+
+    Timeout de 30s (plus long qu'un GET simple) : le backend peut etre
+    temporairement lent si une operation d'enrichissement du catalogue
+    est en cours en parallele.
     """
     response = requests.get(
         f"{BACKEND_URL}/recommend/",
         params={"categorie": categorie, "limit": limit},
-        timeout=10,
+        timeout=30,
     )
     response.raise_for_status()
     return response.json()
