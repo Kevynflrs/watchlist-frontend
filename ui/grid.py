@@ -1,3 +1,4 @@
+import requests
 import streamlit as st
 
 from api_client import get_recommendations
@@ -18,6 +19,10 @@ def render_row(categorie: str) -> None:
     """
     try:
         films = get_recommendations(categorie=categorie, limit=18)
+    except requests.exceptions.Timeout:
+        st.warning(f"Le backend met du temps à répondre pour « {categorie} ». Il est peut-être occupé (import ou enrichissement en cours). Réessaie dans un instant.")
+        return
+    
     except Exception as exc:
         st.error(f"Impossible de charger les recommandations : {exc}")
         return
